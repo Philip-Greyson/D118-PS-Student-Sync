@@ -145,11 +145,12 @@ def syncStudents(schoolMode):
                                     # get info from their account
                                     currentlySuspended = userToUpdate.get('users')[0].get('suspended')
                                     currentOU = userToUpdate.get('users')[0].get('orgUnitPath')
-                                    print(f'Student {email} already has an existing Google account, updating any info')
+                                    print(f'INFO: Student {email} already has an existing Google account, updating any info')
+                                    # print(f'INFO: Student {email} already has an existing Google account, updating any info', file=log)
 
                                     # check to see if the user is enabled in Google, if not add that to the update body
                                     if currentlySuspended == True:
-                                        bodyDict.update({'suspended', 'False'})
+                                        bodyDict.update({'suspended': False})
 
                                     # Check to see if they are in the correct OU (which is based on home building assignment)
                                     if currentOU != properOU:
@@ -229,7 +230,7 @@ def syncStudents(schoolMode):
                                     if not currentlySuspended:
                                         print(f'ACTION: Suspending {email}')
                                         print(f'ACTION: Suspending {email}', file=log)
-                                        bodyDict.update({'suspended' : 'True'}) # add the suspended: True to the body of the update patch
+                                        bodyDict.update({'suspended' : True}) # add the suspended: True to the body of the update patch
                                     if currentOU != properOU:
                                         print(f'ACTION: Moving {email} to suspended OU {properOU}')
                                         print(f'ACTION: Moving {email} to suspended OU {properOU}', file=log)
