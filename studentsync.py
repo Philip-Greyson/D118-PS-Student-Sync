@@ -71,16 +71,18 @@ def syncStudents(schoolMode):
     with oracledb.connect(user=un, password=pw, dsn=cs) as con: # create the connecton to the database
         with con.cursor() as cur:  # start an entry cursor
             with open('StudentLog.txt', 'w') as log:
-                startTime = datetime.now()
-                startTime = startTime.strftime('%H:%M:%S')
+                startDate = datetime.now()
+                startTime = startDate.strftime('%H:%M:%S')
                 print(f'Execution started at {startTime}')
                 print(f'Execution started at {startTime}', file=log)
 
                 # Start by getting a list of schools from the schools table view to get the school names, numbers, etc for use. If the mode is "full" we want all schools, if not we only want the main schools not excluded from state reporting
                 if schoolMode == 'full':
                     cur.execute('SELECT name, school_number, abbreviation FROM schools ORDER BY school_number')
-                else:
+                elif schoolMode == 'limited':
                     cur.execute('SELECT name, school_number, abbreviation FROM schools WHERE State_ExcludeFromReporting = 0 ORDER BY school_number')
+                else:
+                    cur.execute('SELECT name, school_number, abbreviation FROM schools WHERE school_number = ' + schoolMode + ' ORDER BY school_number')
                 
                 schools = cur.fetchall() # store all the query results in the schools list
                 for school in schools:
@@ -118,15 +120,28 @@ def syncStudents(schoolMode):
                             school = int(student[5])
                             grade = int(student[6])
 
+                            currentYear = int(startDate.strftime("%Y")) # get the current year as a integer from the start time
+                            currentMonth = startDate.strftime("%B") # get the current month name as a string
+
                             suspended = False if enroll == 0 or enroll == -1 else True # create a flag for whether they should be suspended or not, will be based on their enroll status
+                            # override graduated students being suspended for the months of july and august so they can still access their emails until september 1st
+                            if gradYear == currentYear: # check current year against grad year
+                                if currentMonth == "July" or currentMonth == "August": # check if it is currently July or August
+                                    if schoolName == 'Graduated Students' and enroll == 3: # make sure the student is in the graduated students building and
+                                        suspended = False
+                                        print(f'WARNING: {email} is a {currentYear} graduate, they will remain active until September 1st')
+                                        print(f'WARNING: {email} is a {currentYear} graduate, they will remain active until September 1st', file=log)
+                
 
                             # set the OU path based on their school, grades, enroll status, etc
                             properOU = orgUnit + gradeOUs.get(grade) # for enabled accounts at normal buildings, they get the overall building OU + the grade level sub-OU
                             # have a section to set OU for pre registered and graduated students separately as it does not include any grade sub-ous
                             if school == 999999 or enroll == 3 or school == 901 or enroll == -1:
                                 properOU = orgUnit
-                            if suspended: # if they are just suspended (but not in the graduated or pre buildings), they get the normal suspended OU
+                            # if they are just suspended (but not graduated), they get the normal suspended OU
+                            if suspended and (school != 999999 and enroll != 3): 
                                 properOU = suspended_OU
+
                             
                             print(f'User {email}, Name: {firstName} {lastName}, school: {school}, grade: {grade}, graduation year: {gradYear}, enroll: {enroll}, suspended: {suspended}, OU path: {properOU}')
                             print(f'User {email}, Name: {firstName} {lastName}, school: {school}, grade: {grade}, graduation year: {gradYear}, enroll: {enroll}, suspended: {suspended}, OU path: {properOU}', file=log)
