@@ -31,7 +31,7 @@ suspended_OU = '/Suspended Accounts'
 # string location of where where the graduated students should go
 graduated_OU = '/Suspended Accounts/Graduated Students'
 # Define a list of sub-OUs in GAdmin where users should not be moved out of. Used for special permissions, apps, licenses, etc
-frozenOrgs = ['/Restricted']
+frozenOrgs = ['/Restricted', '/Adobe Licensed Students']
 # List of names that some of the dummy/old accounts use so we can ignore them
 # badnames = ['USE', 'Training1','Trianing2','Trianing3','Trianing4','Planning','Admin','NURSE','USER', 'USE ', 'TEST', 'TESTTT', 'DO NOT', 'DO', 'NOT', 'TBD', 'LUNCH']
 badnames = ['Use', 'Training1','Trianing2','Trianing3','Trianing4','Planning','Admin','Nurse','User', 'Use ', 'Test', 'Testtt', 'Test22', 'Teststudent', 'Tester', 'Karentest']
@@ -55,8 +55,7 @@ def syncStudents(schoolMode):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
@@ -146,9 +145,9 @@ def syncStudents(schoolMode):
                             print(f'User {email}, Name: {firstName} {lastName}, school: {school}, grade: {grade}, graduation year: {gradYear}, enroll: {enroll}, suspended: {suspended}, OU path: {properOU}')
                             print(f'User {email}, Name: {firstName} {lastName}, school: {school}, grade: {grade}, graduation year: {gradYear}, enroll: {enroll}, suspended: {suspended}, OU path: {properOU}', file=log)
 
-                            # next do a query for the user based on their DCID that should be stored in the Synchronization_Data.DCID custom attribute
-                            queryString = 'email=' + email # construct the query string which looks for the custom Synchronization_Data custom attribute category and the DCID attribute in that category
-                            userToUpdate = service.users().list(customer='my_customer', domain='d118.org', maxResults=2, orderBy='email', projection='full', query=queryString).execute() # return a list of at most 2 users who have that 
+                            # next do a query in Google Admin for the students account based on their email
+                            queryString = 'email=' + email # construct the query string which looks for the email
+                            userToUpdate = service.users().list(customer='my_customer', domain='d118.org', maxResults=2, orderBy='email', projection='full', query=queryString).execute() # return a list of at most 2 users 
 
                             # process all the active students
                             if not suspended:
