@@ -1,5 +1,5 @@
-# this file is just a helper file that executes the main program with only a specific building (for testing)
+"""Helper script to the main studentsync.py script that calls only a specific building so it can be scheduled as a task or for testing."""
 
-from studentsync import * # include the functions from the main studentsync.py file
+from studentsync import *  # include the functions from the main studentsync.py file
 
-syncStudents('999999')
+sync_students('999999')

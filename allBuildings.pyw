@@ -1,6 +1,8 @@
-# this file is just a helper file that executes the main program with all buildings. 
-# With all those buildings, it takes about 60 minutes to process the ~14000 students
+"""Helper script to the main studentsync.py script that calls all the buildings so it can be scheduled as a task or for testing.
 
-from studentsync import * # include the functions from the main studentsync.py file
+In our district, it takes about an hour to process all 140000 students
+"""
 
-syncStudents('full')
+from studentsync import *  # include the functions from the main studentsync.py file
+
+sync_students('full')
