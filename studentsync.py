@@ -25,22 +25,23 @@ DB_PW = os.environ.get('POWERSCHOOL_DB_PASSWORD')  # the password for the databa
 DB_CS = os.environ.get('POWERSCHOOL_PROD_DB')  # the IP address, port, and database name to connect to
 print(f"Database Username: {DB_UN} |Password: {DB_PW} |Server: {DB_CS}")  # debug so we can see where oracle is trying to connect to/with
 
-# the password to use for new staff accounts
-newPass = os.environ.get('NEW_USER_PASSWORD')
- # the string location of where suspended accounts should end up, change if this is different
-SUSPENDED_OU = '/Suspended Accounts'
-# string location of where where the graduated students should go
-GRADUATED_OU = '/Suspended Accounts/Graduated Students'
-# Define a list of sub-OUs in GAdmin where users should not be moved out of. Used for special permissions, apps, licenses, etc
-FROZEN_OUS = ['/Restricted', '/Adobe Licensed Students']
-# List of names that some of the dummy/old accounts use so we can ignore them
-BAD_NAMES = ['use', 'training1','trianing2','trianing3','trianing4','planning','admin','nurse','user', 'use ', 'test', 'testtt', 'test22', 'teststudent', 'tester', 'karentest']
-# dictionary to hold the grade_level to sub-OU name strings
-GRADE_OUS = {-2 : '/PreKindergarten', -1 : '/PreKindergarten', 0 : '/Kindergarten', 1 : '/1st', 2 : '/2nd', 3 : '/3rd', 4 : '/4th', 5 : '/5th', 6 : '/6th', 7 : '/7th', 8 : '/8th', 9 : '/9th', 10 : '/10th', 11 : '/11th', 12 : '/12th', 13 : '', 15: '', 99: ''}
+
+NEW_PASSWORD = os.environ.get('NEW_USER_PASSWORD')  # the password to use for new student accounts. Will be changed by entry of password into PS filed via password script sync later
 OU_PREFIX = '/D118 Students/'  # the base part of the OU for the overall umbrella student OU
-EMAIL_SUFFIX = '@d118.org'  # email domain
+SUSPENDED_OU = '/Suspended Accounts'  # the string location of where suspended accounts should end up
+GRADUATED_OU = '/Suspended Accounts/Graduated Students'  # string location of where where the graduated students should go
+FROZEN_OUS = ['/Restricted', '/Adobe Licensed Students']  # Define a list of sub-OUs in GAdmin where users should not be moved out of. Used for special permissions, apps, licenses, etc
 GRADUATED_SCHOOL_NAME = 'Graduated Students'  # full name of the building where graduated students are moved to
+
+BAD_NAMES = ['use', 'training1','trianing2','trianing3','trianing4','planning','admin','nurse','user', 'use ', 'test', 'testtt', 'test22', 'teststudent', 'tester', 'karentest']  # List of names that some of the dummy/old accounts use so we can ignore them
+GRADE_OUS = {-2 : '/PreKindergarten', -1 : '/PreKindergarten', 0 : '/Kindergarten', 1 : '/1st', 2 : '/2nd', 3 : '/3rd', 4 : '/4th', 5 : '/5th', 6 : '/6th', 7 : '/7th', 8 : '/8th', 9 : '/9th', 10 : '/10th', 11 : '/11th', 12 : '/12th', 13 : '', 15: '', 99: ''}  # dictionary to hold the grade_level to sub-OU name strings
+
+EMAIL_SUFFIX = '@d118.org'  # email domain
 GRADUATED_ACTIVE_SUMMER = True  # true or false whether graduated students should be left active for july/august
+
+CUSTOM_ATTRIBUTE_CATEGORY = 'Synchronization_Data'  # the category name that the custom attributes will be in
+CUSTOM_ATTRIBUTE_SCHOOL = 'Homeschool_ID'  # the field name for the homeschool id custom attribute
+CUSTOM_ATTRIBUTE_GRADYEAR = 'Graduation_Year'  # the field name for the grad year custom attribute
 
 # Google API Scopes that will be used. If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/admin.directory.user', 'https://www.googleapis.com/auth/admin.directory.group', 'https://www.googleapis.com/auth/admin.directory.group.member', 'https://www.googleapis.com/auth/admin.directory.orgunit', 'https://www.googleapis.com/auth/admin.directory.userschema']
@@ -98,7 +99,7 @@ def sync_students(school_mode: any) -> None:
                     schoolAbbrev = school[2]
                     # construct the string for the organization unit in Google Admin from the building name + students
                     orgUnit = OU_PREFIX + schoolAbbrev + ' Students'
-                    if schoolName == GRADUATED_SCHOOL_NAME:  # check and see if our building is the graduated students building since they have a different OU then the rest
+                    if schoolName == GRADUATED_SCHOOL_NAME or enroll == 3:  # check and see if our building is the graduated students building or enroll status is graduated since they have a different OU then the rest
                         orgUnit = GRADUATED_OU
                     print(f'DBUG: Starting Building: {schoolName} | {schoolNum} | {orgUnit}')  # debug
                     print(f'DBUG: Starting Building: {schoolName} | {schoolNum} | {orgUnit}',file=log)  # debug
@@ -128,7 +129,7 @@ def sync_students(school_mode: any) -> None:
                             suspended = False if enroll == 0 or enroll == -1 else True  # create a flag for whether they should be suspended or not, will be based on their enroll status
                             # override graduated students being suspended for the months of july and august so they can still access their emails until september 1st
                             if gradYear == currentYear and GRADUATED_ACTIVE_SUMMER:  # check current year against grad year
-                                if currentMonth == "July" or currentMonth == "August":  # check if it is currently July or August
+                                if currentMonth == "June" or currentMonth == "July" or currentMonth == "August":  # check if it is currently July or August
                                     if schoolName == GRADUATED_SCHOOL_NAME and enroll == 3:  # make sure the student is in the graduated students building and status of graduated
                                         suspended = False
                                         print(f'WARN: {email} is a {currentYear} graduate, they will remain active until September 1st')
@@ -196,19 +197,19 @@ def sync_students(school_mode: any) -> None:
 
                                     # get custom attributes info from their google profile
                                     try:  # put the retrieval of the custom data in a try/except block because some accounts might not have the data, which will then need to be added
-                                        currentSchool = int(userToUpdate.get('users')[0].get('customSchemas').get('Synchronization_Data').get('Homeschool_ID'))  # take the first user's custom schema homeschool id and store it
-                                        currentGrad = int(userToUpdate.get('users')[0].get('customSchemas').get('Synchronization_Data').get('Graduation_Year'))  # take the first user's custom schema graduation year and store it
+                                        currentSchool = int(userToUpdate.get('users')[0].get('customSchemas').get(CUSTOM_ATTRIBUTE_CATEGORY).get(CUSTOM_ATTRIBUTE_SCHOOL))  # take the first user's custom schema homeschool id and store it
+                                        currentGrad = int(userToUpdate.get('users')[0].get('customSchemas').get(CUSTOM_ATTRIBUTE_CATEGORY).get(CUSTOM_ATTRIBUTE_GRADYEAR))  # take the first user's custom schema graduation year and store it
                                         if (currentSchool != school or currentGrad != gradYear):
                                             print(f'INFO: Updating {email}. School from {currentSchool} to {school}, Graduation Year from {currentGrad} to {gradYear}')
                                             print(f'INFO: Updating {email}. School from {currentSchool} to {school}, Graduation Year from {currentGrad} to {gradYear}', file=log)
-                                            bodyDict.update({'customSchemas' : {'Synchronization_Data' : {'Homeschool_ID' : school, 'Graduation_Year' : gradYear}}})
+                                            bodyDict.update({'customSchemas' : {CUSTOM_ATTRIBUTE_CATEGORY : {CUSTOM_ATTRIBUTE_SCHOOL : school, CUSTOM_ATTRIBUTE_GRADYEAR : gradYear}}})
                                     except Exception as er:
                                         print(f'ERROR: User {email} had no or was missing Synchronization_Data, it will be created: ({er})')
                                         print(f'ERROR: User {email} had no or was missing Synchronization_Data, it will be created: ({er})', file=log)
                                         # Since the error was probably not having any synchronization data for whatever reason, it should be added to the body of the update
                                         print(f'INFO: Updating {email}. School to {school}, Graduation Year to {gradYear}')
                                         print(f'INFO: Updating {email}. School to {school}, Graduation Year to {gradYear}', file=log)
-                                        bodyDict.update({'customSchemas' : {'Synchronization_Data' : {'Homeschool_ID' : school, 'Graduation_Year' : gradYear}}})
+                                        bodyDict.update({'customSchemas' : {CUSTOM_ATTRIBUTE_CATEGORY : {CUSTOM_ATTRIBUTE_SCHOOL : school, CUSTOM_ATTRIBUTE_GRADYEAR : gradYear}}})
 
                                     # Finally, do the actual update of the user profile, using the bodyDict we have constructed in the above sections
                                     if bodyDict:  # if there is anything in the body dict we want to update. if its empty we skip the update
@@ -226,8 +227,8 @@ def sync_students(school_mode: any) -> None:
                                     print(f'INFO: User {email} does not exist, will be created', file=log)
                                     try:
                                         # define the new user email, name, and all the basic fields
-                                        newUser = {'primaryEmail' : email, 'name' : {'givenName' : firstName, 'familyName' : lastName}, 'password' : newPass, 'changePasswordAtNextLogin' : True, 'orgUnitPath' : properOU,
-                                                'customSchemas' : {'Synchronization_Data' : {'Homeschool_ID' : school, 'Graduation_Year' : gradYear}}}
+                                        newUser = {'primaryEmail' : email, 'name' : {'givenName' : firstName, 'familyName' : lastName}, 'password' : NEW_PASSWORD, 'changePasswordAtNextLogin' : True, 'orgUnitPath' : properOU,
+                                                'customSchemas' : {CUSTOM_ATTRIBUTE_CATEGORY : {CUSTOM_ATTRIBUTE_SCHOOL : school, CUSTOM_ATTRIBUTE_GRADYEAR : gradYear}}}
                                         outcome = service.users().insert(body=newUser).execute()  # does the actual account creation
                                         # print(outcome, file=log)  # debug, should return the update json body
                                     except Exception as er:
