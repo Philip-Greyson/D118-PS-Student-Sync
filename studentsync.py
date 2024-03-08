@@ -99,7 +99,7 @@ def sync_students(school_mode: any) -> None:
                     schoolAbbrev = school[2]
                     # construct the string for the organization unit in Google Admin from the building name + students
                     orgUnit = OU_PREFIX + schoolAbbrev + ' Students'
-                    if schoolName == GRADUATED_SCHOOL_NAME or enroll == 3:  # check and see if our building is the graduated students building or enroll status is graduated since they have a different OU then the rest
+                    if schoolName == GRADUATED_SCHOOL_NAME:  # check and see if our building is the graduated students building or enroll status is graduated since they have a different OU then the rest
                         orgUnit = GRADUATED_OU
                     print(f'DBUG: Starting Building: {schoolName} | {schoolNum} | {orgUnit}')  # debug
                     print(f'DBUG: Starting Building: {schoolName} | {schoolNum} | {orgUnit}',file=log)  # debug
