@@ -19,7 +19,6 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 # setup db connection
-
 DB_UN = os.environ.get('POWERSCHOOL_READ_USER')  # username for read-only database user
 DB_PW = os.environ.get('POWERSCHOOL_DB_PASSWORD')  # the password for the database account
 DB_CS = os.environ.get('POWERSCHOOL_PROD_DB')  # the IP address, port, and database name to connect to
@@ -39,6 +38,7 @@ GRADE_OUS = {-2 : '/PreKindergarten', -1 : '/PreKindergarten', 0 : '/Kindergarte
 EMAIL_SUFFIX = '@d118.org'  # email domain
 GRADUATED_ACTIVE_SUMMER = True  # true or false whether graduated students should be left active for july/august
 
+GOOGLE_DOMAIN = 'd118.org'  # domain for google admin user searches
 CUSTOM_ATTRIBUTE_CATEGORY = 'Synchronization_Data'  # the category name that the custom attributes will be in
 CUSTOM_ATTRIBUTE_SCHOOL = 'Homeschool_ID'  # the field name for the homeschool id custom attribute
 CUSTOM_ATTRIBUTE_GRADYEAR = 'Graduation_Year'  # the field name for the grad year custom attribute
@@ -151,7 +151,7 @@ def sync_students(school_mode: any) -> None:
 
                             # next do a query in Google Admin for the students account based on their email
                             queryString = 'email=' + email  # construct the query string which looks for the email
-                            userToUpdate = service.users().list(customer='my_customer', domain='d118.org', maxResults=2, orderBy='email', projection='full', query=queryString).execute()  # return a list of at most 2 users
+                            userToUpdate = service.users().list(customer='my_customer', domain=GOOGLE_DOMAIN, maxResults=2, orderBy='email', projection='full', query=queryString).execute()  # return a list of at most 2 users
 
                             # process all the active students
                             if not suspended:
