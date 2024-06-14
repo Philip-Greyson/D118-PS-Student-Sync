@@ -17,6 +17,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # setup db connection
 DB_UN = os.environ.get('POWERSCHOOL_READ_USER')  # username for read-only database user
@@ -32,7 +33,7 @@ GRADUATED_OU = '/Suspended Accounts/Graduated Students'  # string location of wh
 FROZEN_OUS = ['/Restricted', '/Adobe Licensed Students']  # Define a list of sub-OUs in GAdmin where users should not be moved out of. Used for special permissions, apps, licenses, etc
 GRADUATED_SCHOOL_NAME = 'Graduated Students'  # full name of the building where graduated students are moved to
 
-BAD_NAMES = ['use', 'training1','trianing2','trianing3','trianing4','planning','admin','nurse','user', 'use ', 'test', 'testtt', 'test22', 'teststudent', 'tester', 'karentest']  # List of names that some of the dummy/old accounts use so we can ignore them
+BAD_NAMES = ['use', 'training1','trianing2','trianing3','trianing4','planning','admin','nurse','user','use ','test','testtt','test22','teststudent','tester','karentest','returning student','whs','wgs','rcs','ccs','mms','wms']  # List of names that some of the dummy/old accounts use so we can ignore them
 GRADE_OUS = {-2 : '/PreKindergarten', -1 : '/PreKindergarten', 0 : '/Kindergarten', 1 : '/1st', 2 : '/2nd', 3 : '/3rd', 4 : '/4th', 5 : '/5th', 6 : '/6th', 7 : '/7th', 8 : '/8th', 9 : '/9th', 10 : '/10th', 11 : '/11th', 12 : '/12th', 13 : '', 15: '', 99: ''}  # dictionary to hold the grade_level to sub-OU name strings
 
 EMAIL_SUFFIX = '@d118.org'  # email domain
@@ -278,17 +279,16 @@ def sync_students(school_mode: any) -> None:
                                     # print(f'DBUG: Found inactive student {email} without Google account that matches.', file=log)
 
                         except BadNameExceptionError:
-                            print(f'INFO: found user matching name in bad names list {email} - {firstName} {lastName}')
-                            print(f'INFO: found user matching name in bad names list {email} - {firstName} {lastName}', file=log)
+                            print(f'WARN: found user matching name in bad names list {email} - {firstName} {lastName}')
+                            print(f'WARN: found user matching name in bad names list {email} - {firstName} {lastName}', file=log)
+                        except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
+                            status = er.status_code
+                            details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
+                            print(f'ERROR {status} from Google API while processing student {student[0]}: {details["message"]}. Reason: {details["reason"]}')
+                            print(f'ERROR {status} from Google API while processing student {student[0]}: {details["message"]}. Reason: {details["reason"]}', file=log)
                         except Exception as er:
-                            if "Details:" in er:  # if the error is coming from the Google API it will have specific info including the "Details" section
-                                er = er.split("Details: ")[1]  # split the error message by the http code and details
-                                er = er.strip("\"[]>")  # strip out the extra ", [], and > that will still be left over. Should result in a dict with a message, domain, and reason
-                                print(f'ERROR from Google API while processing student {student[0]}: {er["message"]}, reason {er["reason"]}')
-                                print(f'ERROR from Google API while processing student {student[0]}: {er["message"]}, reason {er["reason"]}', file=log)
-                            else:
-                                print(f'ERROR while processing student {student[0]}: {er}')
-                                print(f'ERROR while processing student {student[0]}: {er}', file=log)
+                            print(f'ERROR while processing student {student[0]}: {er}')
+                            print(f'ERROR while processing student {student[0]}: {er}', file=log)
 
         endTime = datetime.now()
         endTime = endTime.strftime('%H:%M:%S')
