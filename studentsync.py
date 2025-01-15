@@ -33,7 +33,7 @@ GRADUATED_OU = '/Suspended Accounts/Graduated Students'  # string location of wh
 FROZEN_OUS = ['/Restricted', '/Adobe Licensed Students']  # Define a list of sub-OUs in GAdmin where users should not be moved out of. Used for special permissions, apps, licenses, etc
 GRADUATED_SCHOOL_NAME = 'Graduated Students'  # full name of the building where graduated students are moved to
 
-BAD_NAMES = ['use', 'training1','trianing2','trianing3','trianing4','planning','admin','nurse','user','use ','test','testtt','test22','teststudent','tester','karentest','returning student','whs','wgs','rcs','ccs','mms','wms']  # List of names that some of the dummy/old accounts use so we can ignore them
+BAD_NAMES = ['use', 'training1','trianing2','trianing3','trianing4','planning','admin','nurse','user','use ','test','testtt','test22','teststudent','tester','karentest','returning student','whs','wgs','rcs','ccs','mms','wms','cotton creek', 'new student test', 'returning student test', 'registration pre-reg', 'registration']  # List of names that some of the dummy/old accounts use so we can ignore them
 GRADE_OUS = {-2 : '/PreKindergarten', -1 : '/PreKindergarten', 0 : '/Kindergarten', 1 : '/1st', 2 : '/2nd', 3 : '/3rd', 4 : '/4th', 5 : '/5th', 6 : '/6th', 7 : '/7th', 8 : '/8th', 9 : '/9th', 10 : '/10th', 11 : '/11th', 12 : '/12th', 13 : '', 15: '', 99: ''}  # dictionary to hold the grade_level to sub-OU name strings
 
 EMAIL_SUFFIX = '@d118.org'  # email domain
