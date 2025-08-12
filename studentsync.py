@@ -45,7 +45,10 @@ CUSTOM_ATTRIBUTE_SCHOOL = 'Homeschool_ID'  # the field name for the homeschool i
 CUSTOM_ATTRIBUTE_GRADYEAR = 'Graduation_Year'  # the field name for the grad year custom attribute
 
 # Google API Scopes that will be used. If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/admin.directory.user', 'https://www.googleapis.com/auth/admin.directory.group', 'https://www.googleapis.com/auth/admin.directory.group.member', 'https://www.googleapis.com/auth/admin.directory.orgunit', 'https://www.googleapis.com/auth/admin.directory.userschema']
+SCOPES = ['https://www.googleapis.com/auth/admin.directory.user', 'https://www.googleapis.com/auth/admin.directory.group', 'https://www.googleapis.com/auth/admin.directory.group.member', 'https://www.googleapis.com/auth/admin.directory.orgunit', 'https://www.googleapis.com/auth/admin.directory.userschema', 'https://www.googleapis.com/auth/apps.licensing']
+
+LICENSE_PRODUCT_ID = '101031'  # https://developers.google.com/admin-sdk/licensing/v1/how-tos/products
+LICENSE_SKU = '1010310008'
 
 def sync_students(school_mode: any) -> None:
     """Main function to sync students, needs to be called with 'full', 'limited', or a specific school number."""
@@ -74,6 +77,7 @@ def sync_students(school_mode: any) -> None:
                 token.write(creds.to_json())
 
         service = build('admin', 'directory_v1', credentials=creds)
+        licenseService = build('licensing', 'v1', credentials=creds)
 
         # define a custom exception class just for use with logging
         class BadNameExceptionError(Exception):
@@ -135,6 +139,19 @@ def sync_students(school_mode: any) -> None:
                                         suspended = False
                                         print(f'WARN: {email} is a {currentYear} graduate, they will remain active until September 1st')
                                         print(f'WARN: {email} is a {currentYear} graduate, they will remain active until September 1st', file=log)
+                                        # remove their license as my other script only removes them once they are suspended, but that overlaps with new school year licensing
+                                        try:
+                                            print(f'INFO: Removing license {LICENSE_PRODUCT_ID} - {LICENSE_SKU} from graduated student {email}')
+                                            print(f'INFO: Removing license {LICENSE_PRODUCT_ID} - {LICENSE_SKU} from graduated student {email}', file=log)
+                                            licenseService.licenseAssignments().delete(productId=LICENSE_PRODUCT_ID, skuId=LICENSE_SKU, userId=email).execute()  # does the actual removal of the license
+                                        except HttpError as er:   # catch Google API http errors, get the specific message and reason from them for better logging
+                                            status = er.status_code
+                                            details = er.error_details[0]  # error_details returns a list with a dict inside of it, just strip it to the first dict
+                                            print(f'ERROR {status} from Google API while removing license from graduated student {email}: {details["message"]}. Reason: {details["reason"]}')
+                                            print(f'ERROR {status} from Google API while removing license from graduated student {email}: {details["message"]}. Reason: {details["reason"]}', file=log)
+                                        except Exception as er:
+                                            print(f'ERROR while removing license from graduated student {email}: {er}')
+                                            print(f'ERROR while removing license from graduated student {email}: {er}', file=log)
 
 
                             # set the OU path based on their school, grades, enroll status, etc
